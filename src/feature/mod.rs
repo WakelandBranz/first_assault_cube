@@ -9,7 +9,10 @@ pub trait FeatureTrait {
         Default::default()
     }
 
+    // Run one
     fn tick(&mut self) {}
+
+    fn cleanup(&mut self) {}
 }
 
 // Type alias for boxed trait object

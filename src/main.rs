@@ -1,8 +1,14 @@
+use crate::process::Process;
+
 mod sdk;
-mod memory;
+mod process;
 mod feature;
-mod feature;
+mod utils;
 
 fn main() {
-    println!("Hello, world!");
+    let pid: i32 = utils::get_pid_by_name("ac_client");
+    println!("Pid: {}", pid);
+
+    let process: Process = Process::new(pid);
+    println!("Process:\n{:?}", &process);
 }
