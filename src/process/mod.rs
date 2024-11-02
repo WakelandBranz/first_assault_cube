@@ -41,6 +41,8 @@ impl Process {
             }
         };
 
+        log::debug!("Got handle! - {:?}", &handle.);
+
         let base_address = unsafe {
             match get_mod_base(pid, &name) {
                 Ok(mod_base) => {
@@ -54,6 +56,8 @@ impl Process {
                 },
             }
         };
+
+        log::debug!("Got base address! - {:?}", base_address);
 
         Self {
             name,

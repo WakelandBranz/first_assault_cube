@@ -149,79 +149,79 @@ impl Player {
 
     // Position setters
     pub fn set_position_x(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + POSITION_X, value)
+        self.client.write(self.address + POSITION_X, value)
     }
 
     pub fn set_position_y(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + POSITION_Y, value)
+        self.client.write(self.address + POSITION_Y, value)
     }
 
     pub fn set_position_z(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + POSITION_Z, value)
+        self.client.write(self.address + POSITION_Z, value)
     }
 
     // Head position setters
     pub fn set_head_position_x(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + HEAD_POSITION_X, value)
+        self.client.write(self.address + HEAD_POSITION_X, value)
     }
 
     pub fn set_head_position_y(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + HEAD_POSITION_Y, value)
+        self.client.write(self.address + HEAD_POSITION_Y, value)
     }
 
     pub fn set_head_position_z(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + HEAD_POSITION_Z, value)
+        self.client.write(self.address + HEAD_POSITION_Z, value)
     }
 
     // Ammo setters
     pub fn set_assault_rifle_ammo(&self, value: u32) -> Option<()> {
-        self.client.write(self.address as u64 + ASSAULT_RIFLE_AMMO, value)
+        self.client.write(self.address + ASSAULT_RIFLE_AMMO, value)
     }
 
     pub fn set_smg_ammo(&self, value: u32) -> Option<()> {
-        self.client.write(self.address as u64 + SMG_AMMO, value)
+        self.client.write(self.address + SMG_AMMO, value)
     }
 
     pub fn set_sniper_ammo(&self, value: u32) -> Option<()> {
-        self.client.write(self.address as u64 + SNIPER_AMMO, value)
+        self.client.write(self.address + SNIPER_AMMO, value)
     }
 
     pub fn set_shotgun_ammo(&self, value: u32) -> Option<()> {
-        self.client.write(self.address as u64 + SHOTGUN_AMMO, value)
+        self.client.write(self.address + SHOTGUN_AMMO, value)
     }
 
     pub fn set_pistol_ammo(&self, value: u32) -> Option<()> {
-        self.client.write(self.address as u64 + PISTOL_AMMO, value)
+        self.client.write(self.address + PISTOL_AMMO, value)
     }
 
     pub fn set_grenade_ammo(&self, value: u32) -> Option<()> {
-        self.client.write(self.address as u64 + GRENADE_AMMO, value)
+        self.client.write(self.address + GRENADE_AMMO, value)
     }
 
     // Fast fire setters
     pub fn set_fast_fire_ar(&self, enabled: bool) -> Option<()> {
-        self.client.write(self.address as u64 + FAST_FIRE_AR, enabled as u8)
+        self.client.write(self.address + FAST_FIRE_AR, enabled as u8)
     }
 
     pub fn set_fast_fire_sniper(&self, enabled: bool) -> Option<()> {
-        self.client.write(self.address as u64 + FAST_FIRE_SNIPER, enabled as u8)
+        self.client.write(self.address + FAST_FIRE_SNIPER, enabled as u8)
     }
 
     pub fn set_fast_fire_shotgun(&self, enabled: bool) -> Option<()> {
-        self.client.write(self.address as u64 + FAST_FIRE_SHOTGUN, enabled as u8)
+        self.client.write(self.address + FAST_FIRE_SHOTGUN, enabled as u8)
     }
 
     // Player stats setters
     pub fn set_health(&self, value: u16) -> Option<()> {
-        self.client.write(self.address as u64 + HEALTH, value)
+        self.client.write(self.address + HEALTH, value)
     }
 
     pub fn set_armor(&self, value: u16) -> Option<()> {
-        self.client.write(self.address as u64 + ARMOR, value)
+        self.client.write(self.address + ARMOR, value)
     }
 
     pub fn set_auto_shoot(&self, enabled: bool) -> Option<()> {
-        self.client.write(self.address as u64 + AUTO_SHOOT, enabled as u8)
+        self.client.write(self.address + AUTO_SHOOT, enabled as u8)
     }
 
     pub fn set_player_name(&self, name: &str) -> Option<()> {
@@ -232,7 +232,7 @@ impl Player {
         let copy_len = name_bytes.len().min(15); // Leave room for null terminator
         buffer[..copy_len].copy_from_slice(&name_bytes[..copy_len]);
         // Write the entire buffer
-        self.client.write(self.address as u64 + PLAYER_NAME, buffer)
+        self.client.write(self.address + PLAYER_NAME, buffer)
     }
 
     pub fn set_random_name(&self) -> Option<()> {
@@ -242,11 +242,11 @@ impl Player {
 
     // Camera angle setters
     pub fn set_camera_x(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + CAMERA_X, value)
+        self.client.write(self.address + CAMERA_X, value)
     }
 
     pub fn set_camera_y(&self, value: f32) -> Option<()> {
-        self.client.write(self.address as u64 + CAMERA_Y, value)
+        self.client.write(self.address + CAMERA_Y, value)
     }
 
     // Convenience methods for setting multiple values
