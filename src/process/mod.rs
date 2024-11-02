@@ -1,6 +1,12 @@
+mod process;
+use process::*;
+
+use crate::utils;
+
 use std::mem;
 
 use memlib::{MemoryRead, MemoryWrite};
+use sysinfo::System;
 use windows::Win32::Foundation::HANDLE;
 use windows::Win32::System::Diagnostics::Debug::ReadProcessMemory;
 use windows::Win32::System::Diagnostics::Debug::WriteProcessMemory;
@@ -9,27 +15,43 @@ use windows::Win32::System::Threading::OpenProcess;
 use windows::Win32::System::Threading::PROCESS_ACCESS_RIGHTS;
 use windows::Win32::System::Threading::PROCESS_ALL_ACCESS;
 
+#[derive(Debug)]
 pub struct Process {
-    pid: i32,
+    name: String,
+    pid: u32,
     handle: HANDLE,
+    base_address: u64,
 }
 
 impl Process {
-    pub fn new(pid: i32) -> Self {
+    pub fn new(process_name: impl ToString + std::fmt::Display) -> Self {
+        let name = process_name.to_string();
+
+        log::debug!("Finding pid of process name '{}'", &name);
+
+        let pid = get_pid_by_name(&name)
+            .unwrap_or_else(|| panic!("Could not get pid!")) as u32;
+
+        log::debug!("Got pid! - {}", &pid);
+
+
+
         let handle = unsafe {
-            OpenProcess(
-                PROCESS_ACCESS_RIGHTS(PROCESS_ALL_ACCESS.0),
-                false,
-                pid as u32,
-            )
+            open_process_handle(pid)
         };
 
         match handle {
-            Err(error) => panic!("Failed to open process: {}", error),
-            Ok(handle) => Self {
-                handle,
-                pid,
-            },
+            Err(error) => panic!("Failed to open process - Error code: {}", error),
+            Ok(handle) => {
+                log::debug!("Got handle! - {:?}", &handle);
+
+                Self {
+                    name: name.to_string(),
+                    handle,
+                    pid,
+                    base_address: 123,
+                }
+            }
         }
     }
 
@@ -67,10 +89,15 @@ impl Process {
                 None,
             )
         };
-        if let Err(error) = status.ok() {
-            log::error!("ReadProcessMemory failed: {}", error);
-            return None;
+
+        match status {
+            Ok(_) => Some(()),
+            Err(error) => {
+                log::error!("ReadProcessMemory failed: {}", error);
+                None
+            }
         }
-        Some(())
     }
+
+
 }

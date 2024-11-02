@@ -1,0 +1,1 @@
+pub type DWORD = u32;

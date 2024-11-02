@@ -4,11 +4,9 @@ mod sdk;
 mod process;
 mod feature;
 mod utils;
+mod types;
 
 fn main() {
-    let pid: i32 = utils::get_pid_by_name("ac_client");
-    println!("Pid: {}", pid);
-
-    let process: Process = Process::new(pid);
+    let process: Process = Process::new("ac_client.exe");
     println!("Process:\n{:?}", &process);
 }
