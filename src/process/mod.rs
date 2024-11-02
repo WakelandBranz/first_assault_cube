@@ -4,7 +4,7 @@ use process::*;
 use crate::utils;
 
 use std::mem;
-
+use std::ptr::null_mut;
 use memlib::{MemoryRead, MemoryWrite};
 use sysinfo::System;
 use windows::Win32::Foundation::HANDLE;
@@ -20,38 +20,46 @@ pub struct Process {
     name: String,
     pid: u32,
     handle: HANDLE,
-    base_address: u64,
+    pub(crate) base_address: *mut core::ffi::c_void,
 }
 
 impl Process {
     pub fn new(process_name: impl ToString + std::fmt::Display) -> Self {
         let name = process_name.to_string();
 
-        log::debug!("Finding pid of process name '{}'", &name);
-
         let pid = get_pid_by_name(&name)
             .unwrap_or_else(|| panic!("Could not get pid!")) as u32;
 
         log::debug!("Got pid! - {}", &pid);
 
-
-
         let handle = unsafe {
-            open_process_handle(pid)
-        };
-
-        match handle {
-            Err(error) => panic!("Failed to open process - Error code: {}", error),
-            Ok(handle) => {
-                log::debug!("Got handle! - {:?}", &handle);
-
-                Self {
-                    name: name.to_string(),
-                    handle,
-                    pid,
-                    base_address: 123,
+            match open_process_handle(pid) {
+                Ok(handle) => handle,
+                Err(error) => {
+                    panic!("Failed to open handle for {}. Error: {}", name, error)
                 }
             }
+        };
+
+        let base_address = unsafe {
+            match get_mod_base(pid, &name) {
+                Ok(mod_base) => {
+                    if mod_base.is_null() {
+                        panic!("Could not find module base for {}", name);
+                    }
+                    mod_base  // Return the base address if not null
+                },
+                Err(error) => {
+                    panic!("Failed to get module base for {}. Error: {}", name, error)
+                },
+            }
+        };
+
+        Self {
+            name,
+            pid,
+            handle,
+            base_address
         }
     }
 
@@ -98,6 +106,4 @@ impl Process {
             }
         }
     }
-
-
 }
