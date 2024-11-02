@@ -63,7 +63,7 @@ impl Process {
         }
     }
 
-    // Generic wrapper that uses try_read_bytes_into under the hood
+    /// Generic wrapper that uses try_read_bytes_into under the hood
     pub fn read<T>(&self, address: u64) -> Option<T>
     where T: Default + Copy {
         // Create a default value of type T
@@ -81,6 +81,21 @@ impl Process {
 
         self.try_read_bytes_into(address, buffer_slice)?;
         Some(buffer)
+    }
+
+    pub fn write<T>(&self, address: u64, value: T) -> Option<()>
+    where T: Copy {
+        // Convert the value into a byte slice
+        let buffer = unsafe {
+            std::slice::from_raw_parts(
+                // Convert &T to *const T (raw pointer) then to *const u8 (byte pointer)
+                &value as *const T as *const u8,
+                // Get the size of T in bytes
+                std::mem::size_of::<T>()
+            )
+        };
+
+        self.try_write_bytes(address, buffer)
     }
 
     // Original function that does the actual reading
@@ -102,6 +117,30 @@ impl Process {
             Ok(_) => Some(()),
             Err(error) => {
                 log::error!("ReadProcessMemory failed: {}", error);
+                None
+            }
+        }
+    }
+
+    fn try_write_bytes(&self, address: u64, buffer: &[u8]) -> Option<()> {
+        if buffer.len() == 0 {
+            return Some(());
+        }
+
+        let status = unsafe {
+            WriteProcessMemory(
+                self.handle,
+                address as _,
+                buffer.as_ptr() as _,
+                mem::size_of_val(buffer) as _,
+                None,
+            )
+        };
+
+        match status {
+            Ok(_) => Some(()),
+            Err(error) => {
+                log::error!("WriteProcessMemory failed: {}", error);
                 None
             }
         }
