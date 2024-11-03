@@ -5,7 +5,6 @@ use crate::utils;
 
 use std::mem;
 use std::ptr::null_mut;
-use memlib::{MemoryRead, MemoryWrite};
 use sysinfo::System;
 use windows::Win32::Foundation::HANDLE;
 use windows::Win32::System::Diagnostics::Debug::ReadProcessMemory;
@@ -15,7 +14,7 @@ use windows::Win32::System::Threading::OpenProcess;
 use windows::Win32::System::Threading::PROCESS_ACCESS_RIGHTS;
 use windows::Win32::System::Threading::PROCESS_ALL_ACCESS;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Process {
     name: String,
     pid: u32,
@@ -41,7 +40,7 @@ impl Process {
             }
         };
 
-        log::debug!("Got handle! - {:?}", &handle.);
+        log::debug!("Got handle! - {:?}", &handle);
 
         let base_address = unsafe {
             match get_mod_base(pid, &name) {
@@ -68,7 +67,7 @@ impl Process {
     }
 
     /// Generic wrapper that uses try_read_bytes_into under the hood
-    pub fn read<T>(&self, address: u64) -> Option<T>
+    pub fn read<T>(&self, address: u32) -> Option<T>
     where T: Default + Copy {
         // Create a default value of type T
         let mut buffer = T::default();  // Example: if T is u32, this is 0u32
@@ -87,7 +86,7 @@ impl Process {
         Some(buffer)
     }
 
-    pub fn write<T>(&self, address: u64, value: T) -> Option<()>
+    pub fn write<T>(&self, address: u32, value: T) -> Option<()>
     where T: Copy {
         // Convert the value into a byte slice
         let buffer = unsafe {
@@ -103,7 +102,7 @@ impl Process {
     }
 
     // Original function that does the actual reading
-    fn try_read_bytes_into(&self, address: u64, buffer: &mut [u8]) -> Option<()> {
+    fn try_read_bytes_into(&self, address: u32, buffer: &mut [u8]) -> Option<()> {
         if buffer.len() == 0 {
             return Some(());
         }
@@ -126,7 +125,7 @@ impl Process {
         }
     }
 
-    fn try_write_bytes(&self, address: u64, buffer: &[u8]) -> Option<()> {
+    fn try_write_bytes(&self, address: u32, buffer: &[u8]) -> Option<()> {
         if buffer.len() == 0 {
             return Some(());
         }

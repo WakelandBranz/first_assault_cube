@@ -95,6 +95,6 @@ pub(super) unsafe fn get_mod_base(pid: u32, mod_name: &str) -> Result<*mut c_voi
 
     // Module not found - return null pointer
     // This is not an error condition, just indicates module wasn't found
-    Ok(null_mut()) // TODO: Check if this still works if it returns a u64
+    Ok(null_mut())
 }
 

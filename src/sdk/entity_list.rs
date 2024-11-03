@@ -1,0 +1,133 @@
+// TODO! Change this to player_list and clean up code
+
+use crate::process::Process;
+use crate::sdk::player::Player;
+use super::offsets::entity_list::*;
+
+use log::{info, debug};
+use crate::sdk::player;
+
+#[derive(Clone, Debug)]
+pub struct EntityList {
+    mem: Process,
+    pub address: u32,
+    pub entities: Vec<Player>,
+}
+
+impl EntityList {
+    pub fn new(mem: Process) -> Self {
+        let address = mem.read::<u32>(mem.base_address as u32 + ENTITY_LIST).unwrap();
+        Self {
+            mem,
+            address,
+            entities: Vec::new(),
+        }
+    }
+
+    /// Returns a vector of all other players in the lobby
+    pub fn players(&self) -> Vec<Player> {
+        let players_base = self.mem.base_address as u32 + ENTITY_LIST;
+
+        info!("Players base: 0x{:x}", players_base);
+
+        // Read the AcVector structure from the target process
+        let vec_of_players = match self.mem.read::<AcVector>(players_base) {
+            Some(vec) => vec,
+            None => {
+                debug!("Failed to read AcVector at 0x{:x}", players_base);
+                return Vec::new();
+            }
+        };
+
+        info!("Found {} elements", vec_of_players.elements);
+
+        let mut players = Vec::with_capacity(32);
+
+        // Fill in the vector of enemies
+        for i in 0..vec_of_players.elements {
+            let player_addr = match self.mem.read::<u32>(vec_of_players.player_addresses + (i * 4) as u32) {
+                Some(addr) => addr as u64,
+                None => continue,
+            };
+
+            // sometimes pointers are NULL
+            if player_addr == 0x0 {
+                continue;
+            }
+
+            let player = player::Player::new(self.mem.clone(), player_addr as u32);
+            debug!("Player name: {}", player.name());
+
+            players.push(player);
+        }
+        players
+    }
+
+
+
+    /*pub fn update_entities(&mut self) -> bool {
+        let mut player_vector: Vec<Player> = Vec::new();
+        let mut current_offset: u32 = 0x4;  // 32-bit alignment in target process
+
+        loop {
+            let current_address = self.address + current_offset;
+            debug!("Reading entity at offset 0x{:x} (address: 0x{:x})", current_offset, current_address);
+
+            // Read 32-bit pointers from target process
+            match self.mem.read::<u32>(current_address) {
+                Some(player_address) => {
+                    if player_address == 0 {
+                        break;
+                    }
+                    debug!("Found player at: 0x{:x}", player_address);
+                    let player = Player::new(self.mem.clone(), player_address);
+                    info!("Player name: {}", player.name());
+                    player_vector.push(player);
+                    current_offset += 0x4;  // Move by 4 bytes since target is 32-bit
+                }
+                None => break
+            }
+
+            if current_offset > 0x1000 {
+                debug!("Hit safety limit for entity list");
+                break;
+            }
+        }
+
+        if player_vector.is_empty() {
+            debug!("Unsuccessfully attempted to grab entity list.");
+            return false;
+        }
+
+        self.entities = player_vector;
+        true
+    }*/
+
+    /*pub fn entities(&self) -> Option<Vec<Player>> {
+        let mut player_vector: Vec<Player> = Vec::new();
+        let mut current_offset = 0x4; // Add offset counter, first entity is empty so skip 0x0
+
+        // Get list of entities
+        loop {
+            // Read the player address and match on the Result
+            match self.mem.read::<u64>(self.address + current_offset) {
+                Some(player_address) => {
+                    let player = Player::new(self.mem.clone(), player_address);
+                    info!("Player name: {}", player.name());
+                    player_vector.push(player);
+                    current_offset += 0x4;
+                }
+                None =>  {
+                    break
+                }
+            }
+        }
+
+        if player_vector.is_empty() {
+            debug!("Unsuccessfully attempted to grab entity list.");
+            return None;
+        }
+
+        Some(player_vector)
+    }*/
+}

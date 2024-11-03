@@ -5,8 +5,14 @@ mod process;
 mod feature;
 mod utils;
 mod prelude;
+mod cheats;
 
 use log::{info, debug};
+
+// Base pointer
+pub const LOCAL_PLAYER: u32 = 0x0017E0A8;
+
+// TODO! Convert all u32 to usize
 
 fn main() {
     env_logger::builder()
@@ -16,33 +22,22 @@ fn main() {
         .init();
 
     let process: Process = Process::new("ac_client.exe");
+    let base = process.base_address as u64;
 
     debug!("{:?}", &process);
 
-    let local_player = sdk::player::Player::new(process);
-    log::info!("health: {}", local_player.health());
-    log::info!("armor: {}",local_player.armor());
-    log::info!("grenade: {}",local_player.grenade_ammo());
-    log::info!("assault rifle ammo: {}",local_player.assault_rifle_ammo());
+    let local_player = sdk::player::Player::new(process.clone(), LOCAL_PLAYER);
 
-    debug!("{:?}", local_player);
+    info!("Local player found: 0x{:x}", local_player.address);
+    info!("health: {}", local_player.health());
+    info!("armor: {}", local_player.armor());
+    info!("assault rifle ammo: {}", local_player.assault_rifle_ammo());
 
-    std::thread::sleep(std::time::Duration::from_millis(3000));
+    let mut entity_list = sdk::entity_list::EntityList::new(process.clone());
+    info!("Entity list found: 0x{:x}", entity_list.address);
 
-    local_player.set_fast_fire_ar(true).unwrap();
-    local_player.set_fast_fire_sniper(true).unwrap();
+    let entities = entity_list.players();
+    info!("Entities: {:?}", entities);
 
-    loop {
-        //println!("X: {}\nY: {}\nZ: {}",local_player.position_x(), local_player.position_y(), local_player.position_z());
-        local_player.set_random_name().unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        local_player.set_health(100).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        local_player.set_assault_rifle_ammo(2).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        local_player.set_fast_fire_ar(true).unwrap();
-        local_player.set_fast_fire_sniper(true).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        std::thread::sleep(std::time::Duration::from_millis(5));
-    }
+    local_player.set_health(212).unwrap();
 }
