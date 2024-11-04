@@ -1,6 +1,8 @@
+use std::mem::offset_of;
 use crate::sdk::{Vector2, Vector3};
 use crate::sdk::weapon::{Weapon, Ammo};
 use crate::process::Process;
+use log::{debug, error};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -17,7 +19,7 @@ pub struct Player {
     pub armor: u32,          // 0x00F0
     _pad_00f4: [u8; 273], // 0x00F4
     pub name: [u8; 16],      // 0x0205
-    _pad_0215: [u8; 343], // 0x0215
+    _pad_0215: [u8; 339], // 0x0214
     pub weapon_ptr: u32, // 0x036C
 }
 
@@ -133,25 +135,45 @@ impl PlayerManager {
     }
 
     // Weapon pointer methods
-    pub fn weapon_ptr(&self) -> u32 {
+    fn weapon_ptr(&self) -> u32 {
         self.player.weapon_ptr
     }
 
-    pub fn set_weapon_ptr(&mut self, ptr: u32) -> Option<()> {
-        let offset = memoffset::offset_of!(Player, weapon_ptr) as u32;
-        self.mem.write(self.address + offset, ptr)?;
-        self.player.weapon_ptr = ptr;
-        Some(())
-    }
-
     // Helper methods for weapon access
-    pub fn weapon(&self) -> Option<Weapon> {
+
+    /// Returns the Ammo struct
+    fn get_weapon(&self) -> Weapon {
         self.mem.read::<Weapon>(self.player.weapon_ptr)
+            .unwrap_or_else(|| panic!("Couldn't retrieve weapon struct in get_weapon!"))
     }
 
-    pub fn weapon_ammo(&self) -> Option<Ammo> {
-        let weapon = self.weapon()?;
-        self.mem.read::<Ammo>(weapon.ammo_ptr)
+    /// Returns the Ammo struct
+    fn get_ammo(&self) -> Ammo {
+        self.mem.read::<Ammo>(self.get_weapon().ammo_ptr)
+            .unwrap_or_else(|| panic!("Couldn't retrieve ammo struct in get_ammo!"))
+    }
+
+    pub fn ammo(&self) -> u32 {
+        self.get_ammo().current
+    }
+
+    pub fn set_ammo(&self, value: u32) -> Option<()> {
+        let weapon = self.get_weapon();
+        let ammo_current_address = weapon.ammo_ptr + memoffset::offset_of!(Ammo, current) as u32;
+
+        match self.mem.write(ammo_current_address, value) {
+            Some(_) => Some(()),
+            None => {
+                error!("Failed to set ammo value to {}", value);
+                None
+            }
+        }
+    }
+
+    pub fn weapon_usage_count(&self) -> u32 {
+        let weapon = self.get_weapon();
+        let ammo = self.mem.read::<Ammo>(weapon.ammo_ptr).unwrap_or_else(|| panic!("Could not get ammo struct in player::ammo!"));
+        ammo.usage_count
     }
 
     // Raw address access

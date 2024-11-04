@@ -15,7 +15,7 @@ pub struct Vector2 {
 
 impl fmt::Display for Vector2 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!("x: {}, y: {}", self.x self.y)
+        write!(f, "x: {}, y: {}", self.x, self.y)
     }
 }
 
@@ -29,7 +29,7 @@ pub struct Vector3 {
 
 impl fmt::Display for Vector3 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!("x: {}, y: {}, z: {}", self.x self.y, self.z)
+        write!(f, "x: {}, y: {}, z: {}", self.x, self.y, self.z)
     }
 }
 

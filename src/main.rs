@@ -35,19 +35,29 @@ fn main() {
     info!("name: {}", local_player.name());
     info!("health: {}", local_player.health());
     info!("armor: {}", local_player.armor());
+    info!("position: {}", local_player.position());
 
     local_player.set_armor(200);
 
-    info!("current ammo: {}", local_player.weapon_ammo().unwrap().current);
-    info!("weapon usage count: {}", local_player.weapon_ammo().unwrap().usage_count);
-
-
+    info!("current ammo: {}", local_player.ammo());
+    info!("weapon usage count: {}", local_player.weapon_usage_count());
 
     let health_address = local_player_ptr + 0xEC;
     process.write::<u32>(health_address, 121);
 
-    // Entity list does not work currently. I need to restructure it.
+    // TODO: Implement check for if player is alive!
 
-    //let mut entity_list = sdk::entity_list::EntityList::new(process.clone());
-    //info!("Entity list found: 0x{:x}", entity_list.address);
+    loop {
+        if let res = local_player.update() == Some(()) {
+            info!("Local player found!");
+            info!("name: {}", local_player.name());
+            info!("health: {}", local_player.health());
+            info!("armor: {}", local_player.armor());
+            info!("position: {}", local_player.position());
+            info!("ammo: {}", local_player.ammo());
+            local_player.set_ammo(69).unwrap();
+            local_player.set_health(local_player.health() + 10);
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        };
+    }
 }
