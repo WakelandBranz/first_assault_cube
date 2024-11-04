@@ -4,7 +4,7 @@
 pub const NUM_GUNS: u32 = 9;
 
 #[derive(Copy, Clone, Debug)]
-pub enum Weapon {
+pub enum WeaponName {
     Knife = 0,
     Pistol,
     Carbine,
@@ -14,4 +14,19 @@ pub enum Weapon {
     Assault,
     Grenade,
     Akimbo,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct Weapon {
+    _pad_0000: [u8; 20], // 0x0000
+    pub ammo_ptr: u32, // 0x0014
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct Ammo {
+    pub current: u32,           // 0x0000
+    _pad_0004: [u8; 68], // 0x0004
+    pub usage_count: u32,    // 0x0048 -- counts the number of times this weapon has been used
 }

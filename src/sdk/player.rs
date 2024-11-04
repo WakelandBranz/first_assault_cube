@@ -1,268 +1,186 @@
-use std::any::Any;
-use Weapon;
-use crate::process::*;
 use crate::sdk::{Vector2, Vector3};
-use crate::utils;
-use super::offsets::player::*;
-use super::weapon::*;
+use crate::sdk::weapon::{Weapon, Ammo};
+use crate::process::Process;
 
-#[derive(Clone, Debug)]
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct Player {
-    mem: Process,
-    pub address: u32,
+    // Virtual table pointer (first 4 bytes in a class with virtual functions)
+    vtable: u32,
+    pub pos_head: Vector3,    // 0x0004
+    pub velocity: Vector3,    // 0x0010
+    _pad_001c: [u8; 12], // 0x001C
+    pub pos: Vector3,        // 0x0028
+    pub camera: Vector2,     // 0x0034
+    _pad_003c: [u8; 176], // 0x003C
+    pub health: u32,         // 0x00EC
+    pub armor: u32,          // 0x00F0
+    _pad_00f4: [u8; 273], // 0x00F4
+    pub name: [u8; 16],      // 0x0205
+    _pad_0215: [u8; 343], // 0x0215
+    pub weapon_ptr: u32, // 0x036C
 }
 
-impl Player {
-    pub fn new(mem: Process, offset: u32) -> Self {
-        let address = mem.read::<u32>(offset).unwrap();
-        Self { mem, address }
+#[derive(Clone)]
+pub struct PlayerManager {
+    mem: Process,
+    address: u32,
+    player: Player,
+}
+
+impl PlayerManager {
+    pub fn new(mem: crate::process::Process, address: u32) -> Option<Self> {
+        let player = mem.read::<Player>(address)?;
+        Some(Self {
+            mem,
+            address,
+            player,
+        })
     }
 
-    pub fn position_x(&self) -> f32 {
-        self.mem.read::<f32>(self.address + POSITION_X).unwrap_or(0.0)
+    // Update the player data from memory
+    pub fn update(&mut self) -> Option<()> {
+        self.player = self.mem.read::<Player>(self.address)?;
+        Some(())
     }
 
-    pub fn position_y(&self) -> f32 {
-        self.mem.read::<f32>(self.address + POSITION_Y).unwrap_or(0.0)
-    }
-
-    pub fn position_z(&self) -> f32 {
-        self.mem.read::<f32>(self.address + POSITION_Z).unwrap_or(0.0)
-    }
-
-    pub fn position(&self) -> Vector3 {
-        let x = self.position_x();
-        let y = self.position_y();
-        let z = self.position_z();
-        Vector3 { x, y, z, }
-    }
-
-    pub fn head_position_x(&self) -> f32 {
-        self.mem.read::<f32>(self.address + HEAD_POSITION_X).unwrap_or(0.0)
-    }
-
-    pub fn head_position_y(&self) -> f32 {
-        self.mem.read::<f32>(self.address + HEAD_POSITION_Y).unwrap_or(0.0)
-    }
-
-    pub fn head_position_z(&self) -> f32 {
-        self.mem.read::<f32>(self.address + HEAD_POSITION_Z).unwrap_or(0.0)
-    }
-
+    // Position (Head) methods
     pub fn head_position(&self) -> Vector3 {
-        let x = self.head_position_x();
-        let y = self.head_position_y();
-        let z = self.head_position_z();
-        Vector3 { x, y, z}
+        self.player.pos_head
     }
 
-    pub fn assault_rifle_ammo(&self) -> u32 {
-        self.mem.read::<u32>(self.address + ASSAULT_RIFLE_AMMO).unwrap_or(0)
+    pub fn set_head_position(&mut self, pos: Vector3) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, pos_head) as u32;
+        self.mem.write(self.address + offset, pos)?;
+        self.player.pos_head = pos;
+        Some(())
     }
 
-    pub fn smg_ammo(&self) -> u32 {
-        self.mem.read::<u32>(self.address + SMG_AMMO).unwrap_or(0)
+    // Velocity methods
+    pub fn velocity(&self) -> Vector3 {
+        self.player.velocity
     }
 
-    pub fn sniper_ammo(&self) -> u32 {
-        self.mem.read::<u32>(self.address + SNIPER_AMMO).unwrap_or(0)
+    pub fn set_velocity(&mut self, vel: Vector3) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, velocity) as u32;
+        self.mem.write(self.address + offset, vel)?;
+        self.player.velocity = vel;
+        Some(())
     }
 
-    pub fn shotgun_ammo(&self) -> u32 {
-        self.mem.read::<u32>(self.address + SHOTGUN_AMMO).unwrap_or(0)
+    // Position methods
+    pub fn position(&self) -> Vector3 {
+        self.player.pos
     }
 
-    pub fn pistol_ammo(&self) -> u32 {
-        self.mem.read::<u32>(self.address + PISTOL_AMMO).unwrap_or(0)
+    pub fn set_position(&mut self, pos: Vector3) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, pos) as u32;
+        self.mem.write(self.address + offset, pos)?;
+        self.player.pos = pos;
+        Some(())
     }
 
-    pub fn grenade_ammo(&self) -> u32 {
-        self.mem.read::<u32>(self.address + GRENADE_AMMO).unwrap_or(0)
+    // Camera methods
+    pub fn camera(&self) -> Vector2 {
+        self.player.camera
     }
 
-    pub fn fast_fire_ar(&self) -> bool {
-        self.mem.read::<u8>(self.address + FAST_FIRE_AR).unwrap_or(0) != 0
+    pub fn set_camera(&mut self, cam: Vector2) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, camera) as u32;
+        self.mem.write(self.address + offset, cam)?;
+        self.player.camera = cam;
+        Some(())
     }
 
-    pub fn fast_fire_sniper(&self) -> bool {
-        self.mem.read::<u8>(self.address + FAST_FIRE_SNIPER).unwrap_or(0) != 0
+    // Health methods
+    pub fn health(&self) -> u32 {
+        self.player.health
     }
 
-    pub fn fast_fire_shotgun(&self) -> bool {
-        self.mem.read::<u8>(self.address + FAST_FIRE_SHOTGUN).unwrap_or(0) != 0
+    pub fn set_health(&mut self, health: u32) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, health) as u32;
+        self.mem.write(self.address + offset, health)?;
+        self.player.health = health;
+        Some(())
     }
 
-    pub fn health(&self) -> u16 {
-        log::debug!("unsuccessful");
-        self.mem.read::<u16>(self.address + HEALTH).unwrap_or(0)
+    // Armor methods
+    pub fn armor(&self) -> u32 {
+        self.player.armor
     }
 
-    pub fn armor(&self) -> u16 {
-        self.mem.read::<u16>(self.address + ARMOR).unwrap_or(0)
+    pub fn set_armor(&mut self, armor: u32) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, armor) as u32;
+        self.mem.write(self.address + offset, armor)?;
+        self.player.armor = armor;
+        Some(())
     }
 
-    pub fn auto_shoot(&self) -> bool {
-        self.mem.read::<u8>(self.address + AUTO_SHOOT).unwrap_or(0) != 0
-    }
-
-    pub fn primary_gun(&self) -> Weapon {
-        let value = self.mem.read::<u32>(self.address + PRIMARY).unwrap();
-        assert!(value < NUM_GUNS);
-
-        match value {
-            0 => Weapon::Knife,
-            1 => Weapon::Pistol,
-            2 => Weapon::Carbine,
-            3 => Weapon::Shotgun,
-            4 => Weapon::Subgun,
-            5 => Weapon::Sniper,
-            6 => Weapon::Assault,
-            7 => Weapon::Grenade,
-            8 => Weapon::Akimbo,
-            _ => unreachable!(),
-        }
-    }
-
+    // Name methods
     pub fn name(&self) -> String {
-        let name_bytes = self.mem.read::<[u8; 16]>(self.address + PLAYER_NAME).unwrap_or([0; 16]);
-        String::from_utf8_lossy(&name_bytes)
-            .trim_matches(char::from(0))
-            .to_string()
+        String::from_utf8_lossy(&self.player.name).trim_matches('\0').to_string()
     }
 
-    pub fn camera_x(&self) -> f32 {
-        self.mem.read::<f32>(self.address + CAMERA_X).unwrap_or(0.0)
+    pub fn set_name(&mut self, name: &str) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, name) as u32;
+        let mut name_bytes = [0u8; 16];
+        let bytes = name.as_bytes();
+        let len = bytes.len().min(15); // Ensure we don't overflow
+        name_bytes[..len].copy_from_slice(&bytes[..len]);
+        self.mem.write(self.address + offset, name_bytes)?;
+        self.player.name = name_bytes;
+        Some(())
     }
 
-    pub fn camera_y(&self) -> f32 {
-        self.mem.read::<f32>(self.address + CAMERA_Y).unwrap_or(0.0)
+    // Weapon pointer methods
+    pub fn weapon_ptr(&self) -> u32 {
+        self.player.weapon_ptr
     }
 
-    pub fn viewport(&self) -> Vector2 {
-        let x = self.camera_x();
-        let y = self.camera_y();
-        Vector2 { x, y }
+    pub fn set_weapon_ptr(&mut self, ptr: u32) -> Option<()> {
+        let offset = memoffset::offset_of!(Player, weapon_ptr) as u32;
+        self.mem.write(self.address + offset, ptr)?;
+        self.player.weapon_ptr = ptr;
+        Some(())
     }
 
-    ///// SETTERS -------------------------------------------------------------------------
-
-    // Position setters
-    pub fn set_position_x(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + POSITION_X, value)
+    // Helper methods for weapon access
+    pub fn weapon(&self) -> Option<Weapon> {
+        self.mem.read::<Weapon>(self.player.weapon_ptr)
     }
 
-    pub fn set_position_y(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + POSITION_Y, value)
+    pub fn weapon_ammo(&self) -> Option<Ammo> {
+        let weapon = self.weapon()?;
+        self.mem.read::<Ammo>(weapon.ammo_ptr)
     }
 
-    pub fn set_position_z(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + POSITION_Z, value)
+    // Raw address access
+    pub fn address(&self) -> u32 {
+        self.address
     }
 
-    // Head position setters
-    pub fn set_head_position_x(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + HEAD_POSITION_X, value)
+    // Get base player struct
+    pub fn player(&self) -> &Player {
+        &self.player
     }
 
-    pub fn set_head_position_y(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + HEAD_POSITION_Y, value)
+    // Check if player is alive
+    pub fn is_alive(&self) -> bool {
+        self.player.health > 0
     }
 
-    pub fn set_head_position_z(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + HEAD_POSITION_Z, value)
+    // Vector helper methods
+    pub fn distance_to(&self, other: &PlayerManager) -> f32 {
+        let dx = self.player.pos.x - other.player.pos.x;
+        let dy = self.player.pos.y - other.player.pos.y;
+        let dz = self.player.pos.z - other.player.pos.z;
+        (dx * dx + dy * dy + dz * dz).sqrt()
     }
 
-    // Ammo setters
-    pub fn set_assault_rifle_ammo(&self, value: u32) -> Option<()> {
-        self.mem.write(self.address + ASSAULT_RIFLE_AMMO, value)
-    }
-
-    pub fn set_smg_ammo(&self, value: u32) -> Option<()> {
-        self.mem.write(self.address + SMG_AMMO, value)
-    }
-
-    pub fn set_sniper_ammo(&self, value: u32) -> Option<()> {
-        self.mem.write(self.address + SNIPER_AMMO, value)
-    }
-
-    pub fn set_shotgun_ammo(&self, value: u32) -> Option<()> {
-        self.mem.write(self.address + SHOTGUN_AMMO, value)
-    }
-
-    pub fn set_pistol_ammo(&self, value: u32) -> Option<()> {
-        self.mem.write(self.address + PISTOL_AMMO, value)
-    }
-
-    pub fn set_grenade_ammo(&self, value: u32) -> Option<()> {
-        self.mem.write(self.address + GRENADE_AMMO, value)
-    }
-
-    // Fast fire setters
-    pub fn set_fast_fire_ar(&self, enabled: bool) -> Option<()> {
-        self.mem.write(self.address + FAST_FIRE_AR, enabled as u8)
-    }
-
-    pub fn set_fast_fire_sniper(&self, enabled: bool) -> Option<()> {
-        self.mem.write(self.address + FAST_FIRE_SNIPER, enabled as u8)
-    }
-
-    pub fn set_fast_fire_shotgun(&self, enabled: bool) -> Option<()> {
-        self.mem.write(self.address + FAST_FIRE_SHOTGUN, enabled as u8)
-    }
-
-    // Player stats setters
-    pub fn set_health(&self, value: u16) -> Option<()> {
-        self.mem.write(self.address + HEALTH, value)
-    }
-
-    pub fn set_armor(&self, value: u16) -> Option<()> {
-        self.mem.write(self.address + ARMOR, value)
-    }
-
-    pub fn set_auto_shoot(&self, enabled: bool) -> Option<()> {
-        self.mem.write(self.address + AUTO_SHOOT, enabled as u8)
-    }
-
-    pub fn set_name(&self, name: &str) -> Option<()> {
-        // Create a fixed-size buffer of 16 bytes
-        let mut buffer = [0u8; 16];
-        // Copy the name bytes into the buffer, truncating if too long
-        let name_bytes = name.as_bytes();
-        let copy_len = name_bytes.len().min(15); // Leave room for null terminator
-        buffer[..copy_len].copy_from_slice(&name_bytes[..copy_len]);
-        // Write the entire buffer
-        self.mem.write(self.address + PLAYER_NAME, buffer)
-    }
-
-    pub fn set_random_name(&self) -> Option<()> {
-        let random_name = utils::random_name_ascii();
-        self.set_name(&random_name)
-    }
-
-    // Camera angle setters
-    pub fn set_camera_yaw(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + CAMERA_X, value)
-    }
-
-    pub fn set_camera_pitch(&self, value: f32) -> Option<()> {
-        self.mem.write(self.address + CAMERA_Y, value)
-    }
-
-    // Convenience methods for setting multiple values
-    pub fn set_position(&self, x: f32, y: f32, z: f32) -> Option<()> {
-        self.set_position_x(x)?;
-        self.set_position_y(y)?;
-        self.set_position_z(z)
-    }
-
-    pub fn set_head_position(&self, position: Vector3) -> Option<()> {
-        self.set_head_position_x(position.x)?;
-        self.set_head_position_y(position.y)?;
-        self.set_head_position_z(position.z)
-    }
-
-    pub fn set_camera(&self, yaw: f32, pitch: f32) -> Option<()> {
-        self.set_camera_yaw(yaw)?;
-        self.set_camera_pitch(pitch)
+    pub fn distance_to_pos(&self, pos: &Vector3) -> f32 {
+        let dx = self.player.pos.x - pos.x;
+        let dy = self.player.pos.y - pos.y;
+        let dz = self.player.pos.z - pos.z;
+        (dx * dx + dy * dy + dz * dz).sqrt()
     }
 }

@@ -68,27 +68,23 @@ impl Process {
 
     /// Generic wrapper that uses try_read_bytes_into under the hood
     pub fn read<T>(&self, address: u32) -> Option<T>
-    where T: Default + Copy {
-        // Create a default value of type T
-        let mut buffer = T::default();  // Example: if T is u32, this is 0u32
+    where T: Copy {
+        unsafe {
+            // Allocate zeroed memory
+            let mut buffer = std::mem::zeroed::<T>();
 
-        // Convert the T into a mutable byte slice
-        let buffer_slice = unsafe {
-            std::slice::from_raw_parts_mut(
-                // Convert &mut T to *mut T (raw pointer) then to *mut u8 (byte pointer)
+            let buffer_slice = std::slice::from_raw_parts_mut(
                 &mut buffer as *mut T as *mut u8,
-                // Get the size of T in bytes (e.g., u32 is 4 bytes)
                 std::mem::size_of::<T>()
-            )
-        };
+            );
 
-        self.try_read_bytes_into(address, buffer_slice)?;
-        Some(buffer)
+            self.try_read_bytes_into(address, buffer_slice)?;
+            Some(buffer)
+        }
     }
 
     pub fn write<T>(&self, address: u32, value: T) -> Option<()>
     where T: Copy {
-        // Convert the value into a byte slice
         let buffer = unsafe {
             std::slice::from_raw_parts(
                 // Convert &T to *const T (raw pointer) then to *const u8 (byte pointer)

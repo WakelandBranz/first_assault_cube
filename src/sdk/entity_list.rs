@@ -62,8 +62,8 @@ impl EntityList {
                 continue;
             }
 
-            let player = Player::new(self.mem.clone(), player_addr as u32);
-            debug!("Player {} health: {}", i, player.health());
+            let player = self.mem.read::<Player>(player_addr as u32).unwrap();
+            //debug!("Player {} health: {}", i, player.health);
             entities.push(player);
         }
 
