@@ -1,5 +1,3 @@
-// TODO! Change this to player_list and clean up code
-
 use crate::process::Process;
 use crate::sdk::player::Player;
 use super::offsets::entity_list::*;
@@ -25,28 +23,29 @@ impl EntityList {
     }
 
     /// Returns a vector of all other players in the lobby
-    pub fn players(&self) -> Vec<Player> {
-        let players_base = self.mem.base_address as u32 + ENTITY_LIST;
-        info!("Players base: 0x{:x}", players_base);
+    pub fn update_entities(&mut self) {
+        let entities_base = self.mem.base_address as u32 + ENTITY_LIST;
+        info!("Entities base: 0x{:x}", entities_base);
 
         // Read the AcVector structure from the target process
-        let vec_of_players = match self.mem.read::<AcVector>(players_base) {
+        let vec_of_entities = match self.mem.read::<AcVector>(entities_base) {
             Some(vec) => {
                 info!("Vector read: elements={}, addresses_base=0x{:x}",
                   vec.elements, vec.player_addresses);
                 vec
             },
             None => {
-                debug!("Failed to read AcVector at 0x{:x}", players_base);
-                return Vec::new();
+                debug!("Failed to read AcVector at 0x{:x}", entities_base);
+                self.entities = Vec::new();
+                return;
             }
         };
 
-        let mut players = Vec::with_capacity(32);
+        let mut entities = Vec::with_capacity(32);
 
         // Fill in the vector of enemies
-        for i in 0..vec_of_players.elements {
-            let current_address = vec_of_players.player_addresses + (i * 0x4) as u32;
+        for i in 0..vec_of_entities.elements {
+            let current_address = vec_of_entities.player_addresses + (i * 4) as u32;
             debug!("Reading player at offset 0x{:x}", current_address);
 
             let player_addr = match self.mem.read::<u32>(current_address) {
@@ -63,13 +62,13 @@ impl EntityList {
                 continue;
             }
 
-            let player = player::Player::new(self.mem.clone(), player_addr as u32);
-            debug!("Player {} name: {}", i, player.name());
-            players.push(player);
+            let player = Player::new(self.mem.clone(), player_addr as u32);
+            debug!("Player {} health: {}", i, player.health());
+            entities.push(player);
         }
 
-        info!("Found {} valid players", players.len());
-        players
+        info!("Found {} valid players", entities.len());
+        self.entities = entities;
     }
 
 

@@ -14,7 +14,7 @@ pub struct Player {
 
 impl Player {
     pub fn new(mem: Process, offset: u32) -> Self {
-        let address = mem.read::<u32>(mem.base_address as u32 + offset).unwrap();
+        let address = mem.read::<u32>(offset).unwrap();
         Self { mem, address }
     }
 
@@ -93,6 +93,7 @@ impl Player {
     }
 
     pub fn health(&self) -> u16 {
+        log::debug!("unsuccessful");
         self.mem.read::<u16>(self.address + HEALTH).unwrap_or(0)
     }
 
