@@ -51,8 +51,17 @@ impl EntityList {
                 continue
             }
 
-            let player: Player = self.mem.read::<Player>(player_addr).unwrap();
-            debug!("Entity {} position: {}", i, player.pos);
+            // Double check to ensure that the entity list is valid.
+            let player: Player = match self.mem.read::<Player>(player_addr) {
+                Some(player) => player,
+                None => {
+                    debug!("Entity list likely invalid (could be loading). Resetting...");
+                    self.entities = Vec::with_capacity(MAX_PLAYERS as usize);
+                    break
+                }
+            };
+
+            //debug!("Entity {} position: {}", i, player.pos);
             self.entities.push(player)
         }
     }
