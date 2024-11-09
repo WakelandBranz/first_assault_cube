@@ -1,28 +1,57 @@
-use std::mem::offset_of;
-use crate::sdk::{Vector2, Vector3};
 use crate::sdk::weapon::{Weapon, Ammo};
 use crate::process::Process;
+
+use std::mem::offset_of;
 use log::{debug, error};
+use glam::{Vec2, Vec3};
+
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Player {
     // Virtual table pointer (first 4 bytes in a class with virtual functions)
     vtable: u32,
-    pub pos_head: Vector3,    // 0x0004
-    pub velocity: Vector3,    // 0x0010
+    pub pos_head: Vec3,    // 0x0004
+    pub velocity: Vec3,    // 0x0010
     _pad_001c: [u8; 12], // 0x001C
-    pub pos: Vector3,        // 0x0028
-    pub camera: Vector2,     // 0x0034
+    pub pos: Vec3,        // 0x0028
+    pub camera: Vec2,     // 0x0034
     _pad_003c: [u8; 176], // 0x003C
     pub health: u32,         // 0x00EC
     pub armor: u32,          // 0x00F0
     _pad_00f4: [u8; 273], // 0x00F4
-    pub name: [u8; 16],      // 0x0205
+    name: [u8; 16],      // 0x0205
     _pad_0215: [u8; 339], // 0x0214
     pub weapon_ptr: u32, // 0x036C
 }
 
+impl Player {
+    pub fn name(&self) -> String {
+        String::from_utf8_lossy(&self.name).trim_matches('\0').to_string()
+    }
+
+    // Check if player is alive
+    pub fn is_alive(&self) -> bool {
+        self.health > 0
+    }
+
+    // Vector helper methods
+    pub fn distance_to(&self, other: &Player) -> f32 {
+        let dx = self.pos.x - other.pos.x;
+        let dy = self.pos.y - other.pos.y;
+        let dz = self.pos.z - other.pos.z;
+        (dx * dx + dy * dy + dz * dz).sqrt()
+    }
+
+    pub fn distance_to_pos(&self, pos: &Vec3) -> f32 {
+        let dx = self.pos.x - pos.x;
+        let dy = self.pos.y - pos.y;
+        let dz = self.pos.z - pos.z;
+        (dx * dx + dy * dy + dz * dz).sqrt()
+    }
+}
+
+/// Use in case there is a need to write to data, otherwise Player should be for reading only
 #[derive(Clone)]
 pub struct PlayerManager {
     mem: Process,
@@ -31,7 +60,7 @@ pub struct PlayerManager {
 }
 
 impl PlayerManager {
-    pub fn new(mem: crate::process::Process, address: u32) -> Option<Self> {
+    pub fn new(mem: Process, address: u32) -> Option<Self> {
         let player = mem.read::<Player>(address)?;
         Some(Self {
             mem,
@@ -47,11 +76,11 @@ impl PlayerManager {
     }
 
     // Position (Head) methods
-    pub fn head_position(&self) -> Vector3 {
+    pub fn head_position(&self) -> Vec3 {
         self.player.pos_head
     }
 
-    pub fn set_head_position(&mut self, pos: Vector3) -> Option<()> {
+    pub fn set_head_position(&mut self, pos: Vec3) -> Option<()> {
         let offset = memoffset::offset_of!(Player, pos_head) as u32;
         self.mem.write(self.address + offset, pos)?;
         self.player.pos_head = pos;
@@ -59,11 +88,11 @@ impl PlayerManager {
     }
 
     // Velocity methods
-    pub fn velocity(&self) -> Vector3 {
+    pub fn velocity(&self) -> Vec3 {
         self.player.velocity
     }
 
-    pub fn set_velocity(&mut self, vel: Vector3) -> Option<()> {
+    pub fn set_velocity(&mut self, vel: Vec3) -> Option<()> {
         let offset = memoffset::offset_of!(Player, velocity) as u32;
         self.mem.write(self.address + offset, vel)?;
         self.player.velocity = vel;
@@ -71,11 +100,11 @@ impl PlayerManager {
     }
 
     // Position methods
-    pub fn position(&self) -> Vector3 {
+    pub fn position(&self) -> Vec3 {
         self.player.pos
     }
 
-    pub fn set_position(&mut self, pos: Vector3) -> Option<()> {
+    pub fn set_position(&mut self, pos: Vec3) -> Option<()> {
         let offset = memoffset::offset_of!(Player, pos) as u32;
         self.mem.write(self.address + offset, pos)?;
         self.player.pos = pos;
@@ -83,11 +112,11 @@ impl PlayerManager {
     }
 
     // Camera methods
-    pub fn camera(&self) -> Vector2 {
+    pub fn camera(&self) -> Vec2 {
         self.player.camera
     }
 
-    pub fn set_camera(&mut self, cam: Vector2) -> Option<()> {
+    pub fn set_camera(&mut self, cam: Vec2) -> Option<()> {
         let offset = memoffset::offset_of!(Player, camera) as u32;
         self.mem.write(self.address + offset, cam)?;
         self.player.camera = cam;
@@ -184,25 +213,5 @@ impl PlayerManager {
     // Get base player struct
     pub fn player(&self) -> &Player {
         &self.player
-    }
-
-    // Check if player is alive
-    pub fn is_alive(&self) -> bool {
-        self.player.health > 0
-    }
-
-    // Vector helper methods
-    pub fn distance_to(&self, other: &PlayerManager) -> f32 {
-        let dx = self.player.pos.x - other.player.pos.x;
-        let dy = self.player.pos.y - other.player.pos.y;
-        let dz = self.player.pos.z - other.player.pos.z;
-        (dx * dx + dy * dy + dz * dz).sqrt()
-    }
-
-    pub fn distance_to_pos(&self, pos: &Vector3) -> f32 {
-        let dx = self.player.pos.x - pos.x;
-        let dy = self.player.pos.y - pos.y;
-        let dz = self.player.pos.z - pos.z;
-        (dx * dx + dy * dy + dz * dz).sqrt()
     }
 }

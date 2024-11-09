@@ -1,4 +1,5 @@
 pub(crate) const ENTITY_LIST: u32 = 0x18AC04;
+pub(crate) const ENTITY_LIST_SIZE: u32 = ENTITY_LIST + 0x8;
 pub(crate) const MAX_PLAYERS: u32 = 32;
 
 // Thank you https://github.com/scannells/ac_rhack/blob/main/src/player/mod.rs
