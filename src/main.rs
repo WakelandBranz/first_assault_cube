@@ -31,7 +31,7 @@ fn main() {
         .unwrap_or_else(|| panic!("Couldn't get local player!"));
 
     let mut entity_list: EntityList = EntityList::new(process.clone());
-    entity_list.update_entities();
+    entity_list.benchmark_updates(100);
 
     info!("Local player found!");
     info!("name: {}", local_player.name());
@@ -51,10 +51,12 @@ fn main() {
     let mut i = 1;
     loop {
         if local_player.update() == Some(()) {
+            entity_list.update();
+
+            //info!("Entities: {}", entity_list.entity_count);
 
             local_player.set_health(local_player.health() + 10);
 
-            entity_list.update_entities();
             //info!("Updated entity list count: {} (iteration {})", entity_list.entity_count, i);
             i += 1;
             std::thread::sleep(std::time::Duration::from_nanos(1));

@@ -21,7 +21,7 @@ pub struct Player {
     pub armor: u32,          // 0x00F0
     _pad_00f4: [u8; 273], // 0x00F4
     name: [u8; 16],      // 0x0205
-    _pad_0215: [u8; 339], // 0x0214
+    _pad_0215: [u8; 339], // 0x0215
     pub weapon_ptr: u32, // 0x036C
 }
 

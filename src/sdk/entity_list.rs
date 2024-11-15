@@ -2,6 +2,8 @@ use crate::process::Process;
 use crate::sdk::player::Player;
 use super::offsets::{entity_list::*, player::HEALTH};
 
+use std::time::Instant;
+
 use log::{info, debug};
 use crate::sdk::player;
 
@@ -34,11 +36,10 @@ impl EntityList {
         }
     }
 
-    /// Update entity list, run before reading from entity vector!
-    pub fn update_entities(&mut self) {
+    /// Update entity list
+    pub fn update(&mut self) {
         self.update_entity_count();
-
-        self.entities = Vec::with_capacity(self.entity_count as usize);
+        self.entities.clear(); // Reuse existing allocation
 
         for i in 0..self.entity_count {
             let player_addr = match self.mem.read::<u32>(self.address + (i * 0x4)) {
@@ -56,7 +57,7 @@ impl EntityList {
                 Some(player) => player,
                 None => {
                     debug!("Entity list likely invalid (could be loading). Resetting...");
-                    self.entities = Vec::with_capacity(MAX_PLAYERS as usize);
+                    self.entities.clear();
                     break
                 }
             };
@@ -64,5 +65,34 @@ impl EntityList {
             //debug!("Entity {} position: {}", i, player.pos);
             self.entities.push(player)
         }
+    }
+
+    /// Get list of entities -- Not currently necessary
+    fn _get_entities(&mut self) -> Vec<Player> {
+        self.update();
+        self.entities.clone()
+    }
+
+    // BENCHMARKING ----------------
+    pub fn benchmark_updates(&mut self, iterations: u32) {
+        let mut times = Vec::with_capacity(iterations as usize);
+
+        for _ in 0..iterations {
+            let start = Instant::now();
+            self.update();
+            times.push(start.elapsed());
+        }
+
+        // Calculate statistics
+        let total: f64 = times.iter().map(|t| t.as_micros() as f64).sum();
+        let avg = total / iterations as f64;
+        let min = times.iter().map(|t| t.as_micros()).min().unwrap();
+        let max = times.iter().map(|t| t.as_micros()).max().unwrap();
+
+        info!("Entity List Update Benchmarks:");
+        info!("Iterations: {}", iterations);
+        info!("Average: {:.2} µs", avg);
+        info!("Min: {} µs", min);
+        info!("Max: {} µs", max);
     }
 }
